@@ -1,25 +1,46 @@
+import { Input } from "./input.js";
+import { Physics } from "./physics.js";
+import { Assets } from "./assets.js";
+
 export class Engine {
     constructor() {
+        // -------------------------
+        // CORE STATE
+        // -------------------------
         this.entities = new Map();
         this.systems = [];
 
         this.last = 0;
         this.running = false;
 
-        this.ctx = null;
-        this.canvas = null;
-
+        // -------------------------
+        // MODULES
+        // -------------------------
         this.input = new Input();
+        this.physics = new Physics();
+        this.assets = new Assets();
+
+        // rendering
+        this.canvas = null;
+        this.ctx = null;
     }
 
-    init(canvas) {
+    // =========================
+    // INIT ENGINE (CALL ONCE)
+    // =========================
+    async init(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
 
+        // INPUT SYSTEM
+        this.input.attach();
+
+        // PHYSICS (WASM SAFE INIT)
+        await this.physics.init();
+
+        // CANVAS SETUP
         this.resize();
         window.addEventListener("resize", () => this.resize());
-
-        this.input.attach();
     }
 
     resize() {
@@ -27,6 +48,9 @@ export class Engine {
         this.canvas.height = window.innerHeight;
     }
 
+    // =========================
+    // ENTITY SYSTEM
+    // =========================
     createEntity(data = {}) {
         const id = crypto.randomUUID();
 
@@ -47,34 +71,51 @@ export class Engine {
         return this.entities.get(id);
     }
 
+    // =========================
+    // SYSTEMS (GAME LOGIC HOOKS)
+    // =========================
     addSystem(fn) {
         this.systems.push(fn);
     }
 
+    // =========================
+    // UPDATE LOOP
+    // =========================
     update(dt) {
-        // SYSTEM LAYER (USER LOGIC)
+        // 1. USER SYSTEMS
         for (const sys of this.systems) {
             sys(this, dt);
         }
 
-        // CORE INTEGRATION (engine-owned motion)
+        // 2. ECS BASIC INTEGRATION
         for (const e of this.entities.values()) {
             e.x += e.vx * dt;
             e.y += e.vy * dt;
         }
+
+        // 3. PHYSICS STEP (optional)
+        this.physics.step(dt);
     }
 
+    // =========================
+    // RENDER LOOP
+    // =========================
     draw() {
         const ctx = this.ctx;
 
+        // clear screen
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+        // draw entities
         for (const e of this.entities.values()) {
             ctx.fillStyle = e.color;
             ctx.fillRect(e.x, e.y, e.size, e.size);
         }
     }
 
+    // =========================
+    // MAIN LOOP
+    // =========================
     loop = (t) => {
         if (!this.running) return;
 
@@ -92,23 +133,8 @@ export class Engine {
         this.last = performance.now();
         requestAnimationFrame(this.loop);
     }
-}
 
-/* ======================
-   INPUT SYSTEM (FIXED)
-====================== */
-
-class Input {
-    constructor() {
-        this.keys = new Set();
-    }
-
-    attach() {
-        window.addEventListener("keydown", e => this.keys.add(e.key));
-        window.addEventListener("keyup", e => this.keys.delete(e.key));
-    }
-
-    down(key) {
-        return this.keys.has(key);
+    stop() {
+        this.running = false;
     }
 }
