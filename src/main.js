@@ -3,24 +3,46 @@ import { Engine } from "./engine.js";
 const canvas = document.getElementById("game");
 const engine = new Engine();
 
-await engine.init(canvas);
-
-// create player
-const player = engine.createEntity({
-    x: 200,
-    y: 200,
-    size: 14,
-    color: "white"
+// =========================
+// BOOT ENGINE
+// =========================
+engine.init(canvas).then(() => {
+    startGame();
 });
 
-// SYSTEM (game logic layer)
-engine.addSystem((engine, dt) => {
-    const p = engine.get(player);
+// =========================
+// GAME LAYER (USER LOGIC ONLY)
+// =========================
+function startGame() {
 
-    if (engine.input.down("w")) p.y -= 200 * dt;
-    if (engine.input.down("s")) p.y += 200 * dt;
-    if (engine.input.down("a")) p.x -= 200 * dt;
-    if (engine.input.down("d")) p.x += 200 * dt;
-});
+    // -------------------------
+    // CREATE PLAYER ENTITY
+    // -------------------------
+    const player = engine.createEntity({
+        x: 200,
+        y: 200,
+        size: 14,
+        color: "white"
+    });
 
-engine.start();
+    // -------------------------
+    // INPUT SYSTEM (CLEAN USAGE)
+    // -------------------------
+    engine.addSystem((engine, dt) => {
+
+        const p = engine.get(player);
+        const speed = 220;
+
+        // movement
+        if (engine.input.down("w")) p.y -= speed * dt;
+        if (engine.input.down("s")) p.y += speed * dt;
+        if (engine.input.down("a")) p.x -= speed * dt;
+        if (engine.input.down("d")) p.x += speed * dt;
+
+    });
+
+    // -------------------------
+    // START ENGINE LOOP
+    // -------------------------
+    engine.start();
+}
