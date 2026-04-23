@@ -1,9 +1,15 @@
 export class Engine {
     constructor() {
         this.entities = new Map();
+        this.systems = [];
+
         this.last = 0;
-        this.ctx = null;
         this.running = false;
+
+        this.ctx = null;
+        this.canvas = null;
+
+        this.input = new Input();
     }
 
     init(canvas) {
@@ -13,7 +19,7 @@ export class Engine {
         this.resize();
         window.addEventListener("resize", () => this.resize());
 
-        this.ctx.fillStyle = "white";
+        this.input.attach();
     }
 
     resize() {
@@ -21,12 +27,17 @@ export class Engine {
         this.canvas.height = window.innerHeight;
     }
 
-    createEntity(x, y, r = 10) {
+    createEntity(data = {}) {
         const id = crypto.randomUUID();
 
         this.entities.set(id, {
-            x, y, r,
-            vx: 0, vy: 0
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            size: 10,
+            color: "white",
+            ...data
         });
 
         return id;
@@ -36,7 +47,17 @@ export class Engine {
         return this.entities.get(id);
     }
 
+    addSystem(fn) {
+        this.systems.push(fn);
+    }
+
     update(dt) {
+        // SYSTEM LAYER (USER LOGIC)
+        for (const sys of this.systems) {
+            sys(this, dt);
+        }
+
+        // CORE INTEGRATION (engine-owned motion)
         for (const e of this.entities.values()) {
             e.x += e.vx * dt;
             e.y += e.vy * dt;
@@ -49,9 +70,8 @@ export class Engine {
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         for (const e of this.entities.values()) {
-            ctx.beginPath();
-            ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillStyle = e.color;
+            ctx.fillRect(e.x, e.y, e.size, e.size);
         }
     }
 
@@ -65,11 +85,30 @@ export class Engine {
         this.draw();
 
         requestAnimationFrame(this.loop);
-    }
+    };
 
     start() {
         this.running = true;
         this.last = performance.now();
         requestAnimationFrame(this.loop);
+    }
+}
+
+/* ======================
+   INPUT SYSTEM (FIXED)
+====================== */
+
+class Input {
+    constructor() {
+        this.keys = new Set();
+    }
+
+    attach() {
+        window.addEventListener("keydown", e => this.keys.add(e.key));
+        window.addEventListener("keyup", e => this.keys.delete(e.key));
+    }
+
+    down(key) {
+        return this.keys.has(key);
     }
 }
