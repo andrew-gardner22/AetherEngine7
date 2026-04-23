@@ -1,11 +1,11 @@
 import { Engine } from "./engine.js";
 
 const canvas = document.getElementById("game");
-
 const engine = new Engine();
-engine.init(canvas);
 
-// PLAYER ENTITY
+await engine.init(canvas);
+
+// create player
 const player = engine.createEntity({
     x: 200,
     y: 200,
@@ -13,22 +13,14 @@ const player = engine.createEntity({
     color: "white"
 });
 
-// INPUT BUFFER (clean + stable)
-const keys = new Set();
-
-window.addEventListener("keydown", e => keys.add(e.key));
-window.addEventListener("keyup", e => keys.delete(e.key));
-
 // SYSTEM (game logic layer)
 engine.addSystem((engine, dt) => {
     const p = engine.get(player);
 
-    const speed = 250;
-
-    if (keys.has("w")) p.y -= speed * dt;
-    if (keys.has("s")) p.y += speed * dt;
-    if (keys.has("a")) p.x -= speed * dt;
-    if (keys.has("d")) p.x += speed * dt;
+    if (engine.input.down("w")) p.y -= 200 * dt;
+    if (engine.input.down("s")) p.y += 200 * dt;
+    if (engine.input.down("a")) p.x -= 200 * dt;
+    if (engine.input.down("d")) p.x += 200 * dt;
 });
 
 engine.start();
